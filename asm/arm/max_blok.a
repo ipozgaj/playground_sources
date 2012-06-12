@@ -1,0 +1,26 @@
+; nalazi najveci parni podatak u bloku memorije koji pocinje na adresi 
+; 0x1000 i zavrsen je brojem 0, te ga zapisuej na adresu 0x2000.
+;
+; (C) 2004  Igor Pozgaj <ipozgaj@fly.srk.fer.hr>
+
+	MOV	R1, #10<8		; 10 shiftan za 8 bitova u lijevo
+	MOV	R2, #0			; trenutni najveci element bloka
+	
+NEXT	LDR	R0, [R1], #1		; uzmi podatak
+	CMP	R0, #0			; gotovo?
+	BEQ	KRAJ
+	ANDS	R3, R0, #1		; provjeri je li paran (najnizi bit=0)
+	BNE	NEXT
+	CMP	R0, R2			; da li je veci od trenutno najveceg?
+	MOVHI	R2, R0			; da... spremni
+	B	NEXT			; odi na iduci podatak
+
+KRAJ	MOV	R1, #20<8		; spremi rezultat
+	STR	R2, [R1]
+	SWI 123456
+
+	`ORG 1000
+	DW	%D 20, %D 23, %D 10, %D 11, %D 45, %D 72, %D 68, %D 53, 0
+
+	`ORG 2000
+	`DS	1

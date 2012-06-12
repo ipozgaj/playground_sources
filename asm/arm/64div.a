@@ -1,0 +1,22 @@
+; 64-bitno dijeljenje metodom uzastopnog oduzimanja. Podaci (djeljenik 
+; i djelitelj) su nepredznaceni brojevi zapisani u memoriji sa pocetkom 
+; na adresi 0x8100. Rezultat se nalazi iza operanada.
+;
+; (C) 2004  Igor Pozgaj <ipozgaj@fly.srk.fer.hr>
+
+	MOV	R4, #81<4			; pocetna adresa podataka
+	LDMIA	R4!, {R5, R6, R7, R8}		; ucitaj podatke
+	MOV	R9, #0				; mjesto za rezultat
+	MOV	R10, #0
+DIV	CMP	R8, R6				; gotovi?
+	BHI	KRAJ
+	CMPEQ	R7, R5				
+	BHI	KRAJ
+	SUBS	R5, R5, R7			; oduzmi visi dio
+	SBC	R6, R6, R8			; oduzmi nizi dio
+	ADDS	R9, R9, #1			; uvecaj rezultat
+	ADC	R10, R10, #0			; uvecaj visi dio ako je C=1
+	B	DIV				; iduca iteracija
+KRAJ	STMIA	R4!, {R5, R6, R9, R10}		; spremi ostatak i rezultat
+	SWI 	123456
+	

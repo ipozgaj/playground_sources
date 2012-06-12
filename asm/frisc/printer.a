@@ -1,0 +1,113 @@
+; 2. laboratorijska vjezba iz kolegija "Racunala i procesi"
+; (C) 2005  Igor Pozgaj <ipozgaj@fly.srk.fer.hr>
+;
+; Autor ovog koda NIJE odgovoran za moguce bilo kakve gubitke bodova 
+; na predajama laboratorijskih vjezbi koji mogu proizaci kao rezultat 
+; upotrebe ovog koda u cjelini ili upotrebom bilo kojeg od njegovih 
+; dijelova. Pisite svoje labose sami, a ovo neka vam posluzi samo za 
+; provjeru ispravnosti vaseg koda. Meni je ovo radilo kako treba (TM).
+; 
+; Za bilo kakva pitanja vezana uz ovu vjezbu mozete mi se 
+; obratiti na gore navedenu email adresu (Subject: RIP lab)
+
+LEN	`EQU	%D 80			; duljina retka
+LF	`EQU	%D 10			; line feed
+HYPHEN	`EQU	2D			; crtica
+SPACE	`EQU	20			; praznina
+
+	`ORG	0			; program ide u ROM (adrese 0-127)
+
+	LOADL	R7, 0DF			; inicijalizacija stoga na adresu 223 (RAM)
+	LOADL	R0, %B 11111111		; sve linije porta 2 postavi kao izlazne
+	STORE	R0, (DP2)		; DP2 (registar smjera) je na adresi 250
+	LOADL	R0, %B 11111101		; sve linije porta 3 osim druge su izlazne
+	STORE	R0, (DP3)		; DP3 (registar smjera) je na adresi 251
+
+	LOADL	R0, LEN			; ucitaj duljinu retka
+	CALL	PHEADER			; pozovi proceduru za ispis zaglavlja
+	MOVE	R0, R2			; spremi duljinu retka (broj ispisanih crtica)
+
+	LOADL	R1, SPACE		; ispis praznina...
+SPACES	CALL	PRINT			; ispisi prazninu
+	DEC	R0			; smanji broj preostalih praznina
+	JP_NZ	SPACES			; ako nismo gotovi nastavi sa ispisom
+	LOADL	R1, LF			; gotovi, stavi \n za ispis (0x10 je ASCII od \n)
+	CALL	PRINT			; ispisi \n
+	LOADL	R0, TEXT		; adresa poruke "Lab. vjezbe -  RIP \n"
+
+MSG	LOADcc	R1, (R0)		; ispis poruke, adresa teksta je u R0, R2 je duljina
+	JP_Z	QUIT			; da li je ucitan znak 0 (kraj niza)? Ako da, zavrsi
+	CALL	PRINT			; nije, ispisi ga
+	INC	R0			; uvecaj izvorisnu adresu (iduci znak)
+	DEC	R2			; da li smo ispisali sve znakove?
+	JP_NZ	MSG			; ne, nastavi
+	LOADL	R1, LF			; da, ispisi \n
+	CALL	PRINT			; salji \n na printer
+	JP	MSG
+
+PRINT	POUT	R1, P2			; salji znak na printer
+	POUT	1, P3			; strobe signal
+READY	PTEST	P3, 2			; provjeri da li je vanjska jedinica spremna
+	JP_PZ	READY			; nije, cekaj jos
+	POUT	0, P3			; spremna je, salji znak 0 kao potvrdu
+ACK	PTEST	P3, 2			; probjeri da li je jedinica spremna za iduci znak
+	JP_PNZ	ACK
+	RET
+
+PHEADER	PUSH	R1			; ispis zaglavlja, spremi R1
+	MOVE	R0, R2			; R2 (kod poziva R0) je duljina retka
+	LOADL	R1, HYPHEN		; crtica
+	LOADL	R3, 2			; brojac linija sa crticama
+DUMP	CALL	PRINT			; salji znak na printer
+	DEC	R2			; smanji broj preostalih znakova ('-')
+	JP_NZ	DUMP			; da li smo gotovi? ako ne, nastavi
+	LOADL	R1, LF			; da, gotovi smo, ispis znaka \n
+	CALL	PRINT			; salji na printer (ispis znaka u R1)
+	DEC	R3			; R3 = broj koliko puta smo ispisali red sa crticama
+	JP_Z	DONE			; ako smo ispisali drugi puta, onda zavrsi sa zagljavljem
+	LOADL	R4, HEADER		; inace, ucitaj adresu poruke "0036402734 Igor Pozgaj"
+	MOVE	R4, R5			; spremi je u R5 jer cemo modificirati R4
+	CLEAR	R2			; ocisti R2 (to ce biti duljina poruke)
+
+LENGTH	LOADcc	R1, (R4)		; ucitaj znak iz poruke i osvjezi zastavice
+	JP_Z	ENDMSG			; zavrsi ako je ucitan znak 0 (kraj niza)
+	INC	R4			; uvecaj izvorisnu adresu (R4 = adresa iduceg znaka u poruci)
+	INC	R2			; uvecaj broj ucitanih znakova (duljina poruke)
+	CMP	R0, R2			; da li smo dosli do kraja retka?
+	JP_NE	LENGTH			; ne, nastavi racunati broj znakova poruke
+	MOVE	R5, R4			; jesmo, stavi adresu pocetka poruke ("0036...") u R4
+	ADD	R5, R0, R5		; i uvecaj je za broj obradjenih znakova
+	JP	WRITE			; ispisi (R4 = adresa poruke, R2 = broj znakova za ispis)
+
+ENDMSG	SUB	R0, R2, R4
+	LOADL	R1, SPACE
+
+LOOP	CALL	PRINT
+	DEC	R4
+	JP_NZ	LOOP
+	MOVE	R5, R4	
+WRITE	LOAD	R1, (R4)		; R1 = znak za ispis, R4 = adresa niza
+	CALL	PRINT			; ispisi
+	INC	R4			; uzmi iduci znak
+	DEC	R2			; umanji broj znakova za ispis
+	JP_NZ	WRITE			; ako nismo gotovi nastavi sa ispisom
+	LOADL	R1, LF			; gotovi smo, salji znak \n za ispis
+	CALL	PRINT			; ispisi znak u R1
+	CMP	R4, R5
+	JP_EQ	LENGTH
+	MOVE	R0, R2			; u R0 je broj znakova '-' koje moramo ispisati
+	LOADL	R1, HYPHEN		; 0x2D je ASCII kod od znaka '-'
+	JP	DUMP			; ispisi crtice
+
+DONE	POP	R1			; vrati R1
+	RET				; povratak iz funkcije za ispis zaglavlja
+
+QUIT	PWRDN				; izgasi vanjske jedinice i procesor
+
+
+	`ORG	56
+
+HEADER	`DW	30, 30, 33, 36, 34, 30, 32, 37, 33, 34, 20, 49, 47, 4F, 52, 20, 50, 4F, 5A, 47, 41, 4A, 00
+TEXT	`DW	4C, 61, 62, 2E, 20, 76, 6A, 65, 7A, 62, 65, 20, 2D, 20, 52, 49, 50, 00
+
+	`END

@@ -1,0 +1,66 @@
+; U racunalnom sustavu nalaze se FRISC i dva sklopa CT. CT1 se nalazi na adresi
+; FFFFFFF4, a CT2 na adresi FFFFFFF8. Na ulaz CNT sklopa CT1 spojen je signal
+; vremenskog vodjenja (clock) frekvencije 10Mhz. Na ulaz CNT sklopa CT2 spojen
+; je neki proces koji generira impulse. Potrebno je napisati program koji ce 
+; koristenjem prekida s CT1 mjeriti broj impulsa koji iz procesa pristizu na 
+; CT2 unutar svake milisekunde. Broj impulsa mjeri se za razdoblje od 10
+; milisekundi, nakon cega treba zaustaviti procesor i sklopove CT. Broj impulsa
+; sprema se u deset memorijskih lokacija pocevsi od adrese 0A na dalje. CT1 je
+; spojen na INT1, a CT2 je spojen na INT2. 
+; Pretpostavka je da u jednoj milisekundi ne dolazi vise od 100 impulsa s
+; procesa na CT2. Uputa: neka samo CT1 generira prekide.
+;
+; (C) 2004  Igor Pozgaj <ipozgaj@fly.srk.fer.hr>
+
+	`ORG	0
+	LOADL	R7, 10000		; inicijaliziraj stog
+	JP	START
+	
+	`ORG	6	
+	`DW	500			; prekidni vektor
+	
+	`ORG	0A
+	`DS	%D 10			; rezultati
+
+START	LOADL	R0, %D 10000		; pokreni CT1 (prekid svake 1 ms)
+	STORE	R0, (CT1_LR)
+	LOADL	R0, %B 11		; CR: START=1, INT=1
+	STORE	R0, (CT1_CR)
+	LOADL	R0, %D 100		; pokreni CT2 (ima max 100 impulsa u 1ms)
+	STORE	R0, (CT2_LR)
+	LOADL	R0, %B 10		; CR: START=1, INT=0
+	STORE	R0, (CT2_CR)
+	WRST	%B 10100000		; omoguci prekid INT1
+WAIT	LOAD	R0, (REZ)		; cekaj dok nismo gotovi
+	SUB	14, R0, R0		; 14 je konacna adresa nakon 10 upisa
+	JR_NZ	WAIT
+	CLEAR	R0			; zaustavi CT-ove i procesor
+	STORE	R0, (CT1_CR)
+	STORE	R0, (CT2_CR)
+	HALT
+
+	`ORG	500			; prekidni potprogram
+	PUSH	R0			; spremi kontekst
+	PUSH	R1
+	STORE	R0, (CT1_IACK)		; potvrda prekida
+	LOAD	R0, (CT2_LR)		; ucitaj stanje CT2 i podesi rezultat
+	SUBnc	%D 100, R0, R0
+	LOAD	R1, (REZ)		; adresa odredista
+	STORE	R0, (R1)		; spremi rezultat
+	INCnc	R1			; uvecaj i spremi izlaznu adresu
+	STORE	R1, (REZ)		
+	LOADL	R0, %D 100		; resetiraj CT2
+	STORE	R0, (CT2_LR)
+	POP	R1			; obnovi kontekst
+	POP	R0
+	STORE	R0, (CT1_IEND)		; signaliziraj kraj prekida
+	RETI				; vrati se iz prekidnog potprograma
+	
+REZ	`DW	0A			; adresa spremnika za podatke
+
+CT1_LR		`EQU	FFFFFFF4
+CT1_CR		`EQU	FFFFFFF5
+CT1_IACK	`EQU	FFFFFFF6
+CT1_IEND	`EQU	FFFFFFF7
+CT2_LR		`EQU	FFFFFFF8
+CT2_CR		`EQU	FFFFFFF9

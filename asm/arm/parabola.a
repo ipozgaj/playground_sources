@@ -1,0 +1,41 @@
+; Za procesor ARM napisati potprogram za dijeljenje brojeva u 2k formatu.
+; Uporabom potprograma izracunati koordinate tjemena parabole koja je opisana
+; jednadzbom y = ax^2 + bx + c, a parametri a, b i c upisani su u memoriju od
+; lokacije 0x100 (svaki broj zauzima samo jednu rijec). Koordinatu x0 tjemena
+; pohraniti na lokaciju 0x200, a koordinatu y0 tjemena pohraniti na lokaciju
+; 0x204. Brojevi su u memoriji spremljeni u little-endian formatu.
+;
+; (C) 2004 Igor Pozgaj <ipozgaj@fly.srk.fer.hr>
+
+	`ORG	0
+	MOV	R13, #10<8
+	MOV	R4, #10<4
+	LDR	R0, [R4], #1
+	MOV	R6, R0
+	LDR	R1, [R4], #1
+	LDR	R2, [R4]
+	MOV	R0, R0, ASR #2
+	STMFD	R13!, {R0, R1}
+	RSB	R0, R0, #0
+	MOV	R4, #20<4
+	STR	R0, [R4]
+	MUL	R0, R0, R1
+	MOV	R0, R0, ASR #1
+	MUL	R6, R6, R2
+	MOV	R6, R6, ASR #2
+	SUB	R6, R6, R0
+	STR	R6, [R4]
+	SWI	123456
+
+DIV	LDMFD	R13!, {R10, R11}		; unistava registre R10, R11 i R0
+	MOV	R0, #0
+NEXT	CMP	R11, R10
+	SUBGE	R11, R11, R10
+	ADDGE	R0, R0, #1
+	BGE	NEXT
+END	MOV	PC, LR
+
+	`ORG	100
+	DW	%D 5, %D 10, %D 6
+	`ORG	200
+	`DS	12

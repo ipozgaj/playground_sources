@@ -1,0 +1,55 @@
+; U racunalnom sustavu nalaze se FRISC i tri vanjske jedinice: vj1, vj2 i vj3
+; (redom na adresama FFFF1000, FFFF2000 i FFFF3000). FRISC prenosi podatke s
+; bezuvjetne vanjske jedinice vj1 na uvjetnu izlaznu jedinicu vj2. Jedinica
+; vj3 takodjer radi u uvjetnom nacinu, ali njoj se salje suma podataka koji su
+; preneseni sa vj1 na vj2 u zadnjem razdoblju od kada je vj3 bila zadnji puta
+; spremna. Kada se sa vj1 primi podataka s vrijednoscu -1, treba zaustaviti
+; program i vanjske jedinice. Vanjske jedinice imaju opcenitu gradju prikazanu
+; u knjizi "Osnove procesora FRISC" s dodatkom da imaju jos jednu adresu iza
+; uobicajenih (tj. bezuvjetna jedinica ima dodatnu adresu FFFF0001, a uvjetne
+; imaju dodatne adrese FFFF2002, odnosno FFFF3002). Upisom bilo kakvog podatka
+; na tu adresu zaustavlja se rad jedinice
+;
+; (C) 2004  Igor Pozgaj <ipozgaj@fly.srk.fer.hr>
+
+VJ1	`EQU	0FFFF1000
+VJ2	`EQU	0FFFF2000
+VJ3	`EQU	0FFFF3000
+VJ1_STOP `EQU	0FFFF1001
+VJ2_STOP `EQU	0FFFF2002
+VJ3_STOP `EQU	0FFFF3002
+VJ2_STATUS `EQU	0FFFF2001
+VJ3_STATUS `EQU 0FFFF3001
+
+	`ORG	0
+
+	LOADL	R7, 1000		; inicijaliziraj stog
+	CLEAR	R3			; zbroj za jedinicu vj3
+
+NEXT	LOAD	R0, (VJ1)		; uzmi podatak iz vj1
+	LOADL	R2, 1			; flag za ispitivanje statusa vj2
+	CMP	-1, R0			; da li smo gotovi?
+	JR_NE	POLL
+	STORE	R0, (VJ1_STOP)		; zaustavi vanjske jedinice i procesor
+	STORE	R0, (VJ2_STOP)
+	STORE	R0, (VJ3_STOP)
+	HALT
+
+POLL	LOADcc	R1, (VJ2_STATUS)	; provjeri stanje vj2
+	CALL_NZ	W_VJ2		
+	LOADcc	R1, (VJ3_STATUS)	; provjeri stanje vj3
+	CALL_NZ	W_VJ3
+	TEST	R2			; spremni za iduci podatak? (R2=0?)
+	JR_Z	NEXT			; da, uzmi sljedeci podatak
+	JR	POLL			; ne, kreni ponovno
+
+W_VJ2	STORE	R0, (VJ2)		; salji podatak u vj2
+	STORE	R0, (VJ2_STATUS)
+	ADD	R0, R3, R3		; zbroj za vj3
+	CLEAR	R2			; ocisti status
+	RET
+
+W_VJ3	STORE	R3, (VJ3)		; salji podatak u vj3
+	STORE	R3, (VJ3_STATUS)
+	CLEAR	R3			; postavi zbroj na 0
+	RET

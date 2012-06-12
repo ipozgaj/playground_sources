@@ -1,0 +1,43 @@
+; Napisati potprogram koji ce 32 bitovni binarni broj smjesten u registru 
+; D3 pretvoriti u niz ASCII znakova ('0' i '1') koje ce pohraniti na niz 
+; memorijskih lokacija pocevsi od one na koju pokazuje registar A3. 
+; U glavnom programu treba ucitati potrebne podatke s tipkovnice, pripremiti 
+; ulazne podatke za poziv potprograma, te ispisati rezultat (kao niz znakova)
+
+MSG	DC.B	'Unesi broj: '
+LEN	EQU	*-MSG
+
+	ORG	$500
+DEST	DS.W	32
+
+	ORG	$100	
+	JMP	START
+
+TOASCII
+	MOVE.L	#$80000000,D1
+NEXT	MOVE.L	D3,D0
+	AND.L	D1,D0
+	BNE	NZ
+	MOVE.B	#48,(A3)+
+	JMP	DONE
+NZ	MOVE.B	#49,(A3)+
+DONE	LSR.L	#1,D1
+	BNE	NEXT
+	RTS
+
+START
+	MOVEA.L	#MSG,A1
+	MOVE.L	#LEN,D1
+	MOVE.L	#1,D0
+	TRAP	#15
+	MOVEA.L	#DEST,A3
+	MOVE.L	#4,D0
+	TRAP	#15
+	MOVE.L	D1,D3
+	BSR	TOASCII
+	MOVE.L	#0,D0
+	MOVEA.L	#DEST,A1
+	MOVE.L	#32,D1
+	TRAP	#15
+	STOP	#0
+	END	$100

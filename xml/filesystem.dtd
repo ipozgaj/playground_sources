@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- 
+	DTD za jednostavni Unix like datotecni sustav 
+	(C) 2005  Igor Pozgaj <ipozgaj@fly.srk.fer.hr>
+-->
+
+<!ELEMENT root (device)+>
+<!ELEMENT device (directory | file)*>
+<!ELEMENT directory (directory*, file*)>
+<!ELEMENT file EMPTY>
+
+<!ATTLIST device
+	name	CDATA #REQUIRED
+	id	CDATA #REQUIRED
+	type	CDATA #REQUIRED
+>
+
+<!ATTLIST directory
+	name	CDATA #REQUIRED
+	owner	CDATA #REQUIRED
+	group	CDATA #REQUIRED
+	uattr	(R|W|X|RW|RX|WX|RWX) "RW"
+	gattr	(R|W|X|RW|RX|WX|RWX) "R"
+	oattr	(R|W|X|RW|RX|WX|RWX) "R"
+>
+
+<!ATTLIST file
+	name	CDATA #REQUIRED
+	owner	CDATA #REQUIRED
+	group	CDATA #REQUIRED
+	size	CDATA #REQUIRED
+	date	CDATA #REQUIRED
+	uattr	(R|W|X|RW|RX|WX|RWX) "RW"
+	gattr	(R|W|X|RW|RX|WX|RWX) "R"
+	oattr	(R|W|X|RW|RX|WX|RWX) "R"
+>

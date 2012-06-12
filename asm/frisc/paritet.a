@@ -1,0 +1,66 @@
+; Za FRISC treba napisati potprogram PARITET koji prebraja jedinice u nizih 
+; 31 bita podatka te postavlja/brise najvisi bit tako da rezultantni 32-bitni 
+; podatak ima parni paritet. Podatak se u potprogram unosi preko stoga, a 
+; rezultat se vraca registrom R0. Drugi potprogram BLOK_PAR obradjuje blok 
+; memorije (pomocu potprograma PARITET) tako da svi podatci u bloku dobiju 
+; parni paritet. Pocetna adresa bloka i broj podataka u bloku prenose se preko 
+; stoga. Oba potprograma moraju sacuvati sadrzaje registara. Glavni program 
+; poziva potprogram BLOK_PAR tako da obradi blok sa 5 podataka od pocetne 
+; adrese BLOK. Ovaj blok nalazi se iza glavnog programa i sadrzi podatke: 
+; 1, 72004103, FFFF, 77777, 0
+;
+; (C) 2004  Igor Pozgaj <ipozgaj@fly.srk.fer.hr>
+
+	`ORG	0
+
+	LOADL	R7, 10000		; inicijaliziraj pokazivac stoga
+	LOADL	R0, BLOK		; stavi parametre na stog
+	PUSH	R0
+	LOADL	R0, BROJ_POD
+	PUSH	R0
+	CALL	BLOK_PAR		; podesi paritet za cijeli blok
+	ADD	2, R7, R7		; ukloni parametre sa stoga
+	HALT
+
+PARITET	PUSH	R1			; spremi registre koje koristimo
+	PUSH	R2
+	PUSH	R3
+	LOAD	R0, (R7+4)		; parametar kojem treba podesiti paritet
+	CLEAR	R1			; brojac jedinica
+	LOADL	R2, 1			; maska za provjeru stanja bitova
+NEXT	AND	R0, R2, R3		; provjeri da li je na zadanom mjestu jedinica ili nula
+	JR_Z	.+2			; nula... prijedji na sljedeci bit
+	INC	R1			; jedinica... uvecaj ukupan broj jedinica za 1
+	ROTL	1, R2, R2		; podesi novu masku (00...00001 -> 00...00010)
+	JR_NC	NEXT			; da li smo gotovi (carry sadrzi izlazni bit)
+	AND	1, R1, R1		; provjeri da li je broj jedinica paran ili neparan
+	JR_Z	.+4			; paran... zavrsi s potprogramom
+	LOADL	R3, #LO MASKA		; neparan... postavi najvisi bit na 1
+	LOADH	R3, #HI	MASKA
+	OR	R3, R0, R0
+	POP	R3			; vrati stare vrijednosti registara koje smo koristili
+	POP	R2
+	POP	R1
+	RET
+
+BLOK_PAR PUSH 	R0			; spremi registre koje koristimo
+	PUSH	R1
+	PUSH	R4
+	LOAD	R4, (R7+4)		; broj podataka u bloku
+	LOAD	R1, (R7+5)		; pocetna adresa bloka
+NEXT2	LOAD	R0, (R1)		; uzmi podatak iz memorije
+	PUSH	R0			; stavi podatak na stog
+	CALL	PARITET			; podesi paritet podatka
+	INC	R7			; ukloni parametar sa stoga
+	STORE	R0, (R1)		; azuriraj podatak u memoriji (rezultat je u R0)
+	INC	R1			; prijedji na sljedeci podatak
+	DEC	R4			; da li smo gotovi?
+	JR_NZ	NEXT2			
+	POP	R4			; vrati stare vrijednosti registara
+	POP	R1
+	POP	R0
+	RET
+
+BROJ_POD	`EQU	5
+MASKA		`EQU	80000000
+BLOK		`DW	1, 72004103, FFFF, 77777, 0

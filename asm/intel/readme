@@ -1,0 +1,17 @@
+Linux sistemski pozivi:
+	- u eax se nalazi broj poziva (vidi /usr/include/asm/unistd.h)
+	- parametri (pogledaj man 2 ime_poziva) se nalaze redom u: ebx, ecx, edx, esi, edi, ebp
+	- ako poziv zahtjeva vise od 6 parametara, ebx je pokazivac na listu parametara
+	- pozivi se izvrsavaju pozivanjem prekida 0x80
+	- izlazni kod nakon poziva se nalazi u eax
+	- izlazni kod je negativan ako je doslo do greske
+
+C pozivne konvencije (gcc):
+	- parametri se stavljaju na stog s desna na lijevo ([esp+4], [esp+8]...)
+	- parametri se uklanjaju sa stoga nakon poziva funkcije
+	- registri koji se ne mijenjaju pozivom funkcije: ebx, esi, edi, ebp, ds, es, ss
+	- char se vraca u al
+	- short se vraca u ax
+	- int i pointer se vraca u eax
+	- 64 bitni int se vraæa u edx:eax
+	- float brojevi se vracaju na FPU stog

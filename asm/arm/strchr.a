@@ -1,0 +1,25 @@
+; C funkciju strchr() za procesor ARM.
+; Potprogram prima adresu stringa (terminiranog nulom) i znak koji 
+; treba pronaci preko stoga. Rezultat se vraca preko registra R0.
+;
+; (C) 2004  Igor Pozgaj <ipozgaj@fly.srk.fer.hr> 
+
+	MOV	R13, #10<4
+	MOV	R1, #STRING
+	LDRB	R2, CHR
+	STMFD R13!, {R1, R2}
+	BL	STRCHR
+	STRB	R0, REZ
+	SWI	123456
+
+STRCHR	LDMFD	R13!, {R1, R2}
+	MOV	R0, #0
+NEXT	LDRB	R3, [R1], #1
+	CMP	R3, R2
+	ADDNE	R0, R0, #1
+	BNE	NEXT
+	MOV	PC, LR
+
+STRING	DB	41, 52, 4D, 20, 72, 75, 6C, 65, 7A, 0
+CHR	DB	6C
+REZ	`DS	1
